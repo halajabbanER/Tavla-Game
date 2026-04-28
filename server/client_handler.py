@@ -21,7 +21,7 @@ class ClientHandler:
                 self.send(response)
 
         except Exception as e:
-            print("Client error:", e)
+            print("Client not correct:", e)
 
         finally:
             self.client_socket.close()
