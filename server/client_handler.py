@@ -18,12 +18,15 @@ class ClientHandler:
 
                 message = json.loads(data)
                 response = self.room.handle_message(self, message)
-                self.send(response)
+
+                if response:
+                    self.send(response)
 
         except Exception as e:
-            print("Client not correct:", e)
+            print("Client error:", e)
 
         finally:
+            self.room.remove_client(self)
             self.client_socket.close()
 
     def send(self, data):

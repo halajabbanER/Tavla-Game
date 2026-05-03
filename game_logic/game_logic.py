@@ -26,7 +26,7 @@ class GameLogic:
             }
 
         to_pos = result
-        self.board.move_checker(from_pos, to_pos, player)
+        move_type = self.board.move_checker(from_pos, to_pos, player)
 
         return {
             "success": True,
@@ -34,9 +34,13 @@ class GameLogic:
             "from": from_pos,
             "to": to_pos,
             "dice_used": dice_value,
+            "move_type": move_type,
             "borne_off": player.borne_off,
             "winner": self.board.is_win(player)
         }
 
     def get_board(self):
         return self.board.to_dict()
+
+    def get_bar(self):
+        return self.board.bar

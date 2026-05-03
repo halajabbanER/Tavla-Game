@@ -26,7 +26,6 @@ class GameManager:
     def handle_roll(self, player_id):
         result = self.session.roll(player_id)
         result["type"] = "roll_result"
-        result["state"] = self.session.get_state()
         return result
 
     def handle_move(self, player_id, from_pos, dice_value):
@@ -34,8 +33,14 @@ class GameManager:
         result["type"] = "move_result"
         return result
 
+    def handle_skip(self, player_id, dice_value):
+        result = self.session.skip_dice(player_id, dice_value)
+        result["type"] = "skip_result"
+        return result
+
     def get_state(self):
         return {
+            "success": True,
             "type": "game_state",
             "state": self.session.get_state()
         }
