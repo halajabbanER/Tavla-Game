@@ -1,6 +1,9 @@
 import json
 
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QFrame, QPushButton
+from PyQt5.QtWidgets import (
+    QWidget, QLabel, QVBoxLayout, QHBoxLayout,
+    QFrame, QPushButton, QMessageBox
+)
 from PyQt5.QtCore import Qt, QPoint, pyqtSignal
 from PyQt5.QtGui import QPainter, QPolygon, QColor, QRadialGradient, QPen
 
@@ -17,9 +20,7 @@ class DiceLabel(QLabel):
         self.clicked.emit(self.dice_index)
 
     def set_selected(self, selected):
-        self.selected = selected
         border = "4px solid yellow" if selected else "3px solid #2B120C"
-
         self.setStyleSheet(f"""
             QLabel {{
                 background-color: white;
@@ -84,7 +85,11 @@ class TriangleWidget(QWidget):
         x = (self.width() - checker_size) // 2
 
         for index, checker_color in enumerate(self.checkers[:5]):
-            y = 8 + index * 38 if self.upside else self.height() - checker_size - 8 - index * 38
+            if self.upside:
+                y = 8 + index * 38
+            else:
+                y = self.height() - checker_size - 8 - index * 38
+
             self.draw_checker(painter, x, y, checker_size, checker_color)
 
     def draw_checker(self, painter, x, y, size, checker_color):
@@ -137,7 +142,10 @@ class BarWidget(QWidget):
             self.draw_checker(painter, x, 20 + i * 35, checker_size, "white")
 
         for i, _ in enumerate(self.dark_checkers[:5]):
-            self.draw_checker(painter, x, self.height() - 55 - i * 35, checker_size, "dark")
+            self.draw_checker(
+                painter, x, self.height() - 55 - i * 35,
+                checker_size, "dark"
+            )
 
     def draw_checker(self, painter, x, y, size, checker_color):
         if checker_color == "white":
@@ -174,6 +182,7 @@ class GameWindow(QWidget):
         self.current_board = []
         self.current_bar = {"1": 0, "-1": 0}
         self.game_over = False
+        self.winner_popup_shown = False
 
         self.setWindowTitle("Backgammon Board")
         self.resize(1150, 650)
@@ -225,7 +234,11 @@ class GameWindow(QWidget):
         self.skip_btn = QPushButton("Skip Dice")
         self.exit_btn = QPushButton("Exit")
 
-        for btn in [self.roll_btn, self.state_btn, self.bar_btn, self.skip_btn, self.exit_btn]:
+        for btn in [
+            self.roll_btn, self.state_btn,
+            self.bar_btn, self.skip_btn,
+            self.exit_btn
+        ]:
             btn.setFixedHeight(55)
             btn.setStyleSheet("""
                 QPushButton {
@@ -308,9 +321,16 @@ class GameWindow(QWidget):
 
             if "bar" in state:
                 self.current_bar = state["bar"]
-                white_bar = self.current_bar.get(1, self.current_bar.get("1", 0))
-                dark_bar = self.current_bar.get(-1, self.current_bar.get("-1", 0))
-                self.bar_widget.set_checkers(["white"] * white_bar, ["dark"] * dark_bar)
+                white_bar = self.current_bar.get(
+                    1, self.current_bar.get("1", 0)
+                )
+                dark_bar = self.current_bar.get(
+                    -1, self.current_bar.get("-1", 0)
+                )
+                self.bar_widget.set_checkers(
+                    ["white"] * white_bar,
+                    ["dark"] * dark_bar
+                )
 
             self.current_dice = state.get("current_dice", [])
             self.game_over = state.get("game_over", False)
@@ -333,33 +353,50 @@ class GameWindow(QWidget):
                 has_bar_checker = self.has_my_checker_on_bar()
 
                 self.roll_btn.setEnabled(
-                    self.is_my_turn and len(self.current_dice) == 0 and not self.game_over
+                    self.is_my_turn
+                    and len(self.current_dice) == 0
+                    and not self.game_over
                 )
 
                 self.bar_btn.setEnabled(
-                    self.is_my_turn and bool(self.current_dice) and has_bar_checker and not self.game_over
+                    self.is_my_turn
+                    and bool(self.current_dice)
+                    and has_bar_checker
+                    and not self.game_over
                 )
 
                 self.skip_btn.setEnabled(
-                    self.is_my_turn and bool(self.current_dice) and not self.game_over
+                    self.is_my_turn
+                    and bool(self.current_dice)
+                    and not self.game_over
                 )
 
                 if not self.game_over:
                     if self.is_my_turn:
                         if has_bar_checker and self.current_dice:
-                            self.status_label.setText("Status: Enter from bar first")
+                            self.status_label.setText(
+                                "Status: Enter from bar first"
+                            )
                         elif self.current_dice:
-                            self.status_label.setText("Status: Your turn - choose dice/checker")
+                            self.status_label.setText(
+                                "Status: Your turn - choose dice/checker"
+                            )
                         else:
-                            self.status_label.setText("Status: Your turn - roll dice")
+                            self.status_label.setText(
+                                "Status: Your turn - roll dice"
+                            )
                     else:
-                        self.status_label.setText("Status: Waiting for opponent")
+                        self.status_label.setText(
+                            "Status: Waiting for opponent"
+                        )
 
             self.update_highlights()
-
+ 
             if self.game_over:
                 winner = state.get("winner", "Player")
+
                 self.status_label.setText(f"🎉 {winner} wins!\nGame Over")
+
                 self.roll_btn.setEnabled(False)
                 self.state_btn.setEnabled(False)
                 self.bar_btn.setEnabled(False)
@@ -368,6 +405,14 @@ class GameWindow(QWidget):
                 for point in self.points:
                     point.set_highlighted(False)
 
+                if not self.winner_popup_shown:
+                    self.winner_popup_shown = True
+                    QMessageBox.information(
+                        self,
+                        "Game Over",
+                        f"🎉 {winner} wins!\nGame Over"
+                    )
+
                 return
 
         if "dice" in data:
@@ -375,8 +420,12 @@ class GameWindow(QWidget):
             self.selected_dice_index = 0
             self.refresh_dice_display()
             self.roll_btn.setEnabled(False)
-            self.skip_btn.setEnabled(self.is_my_turn and bool(self.current_dice))
-            self.bar_btn.setEnabled(self.is_my_turn and self.has_my_checker_on_bar())
+            self.skip_btn.setEnabled(
+                self.is_my_turn and bool(self.current_dice)
+            )
+            self.bar_btn.setEnabled(
+                self.is_my_turn and self.has_my_checker_on_bar()
+            )
             self.update_highlights()
 
         if message:
@@ -391,17 +440,25 @@ class GameWindow(QWidget):
                 self.status_label.setText("Status: Checker moved")
             elif message == "Dice rolled":
                 if self.has_my_checker_on_bar():
-                    self.status_label.setText("Status: Dice rolled - enter from bar")
+                    self.status_label.setText(
+                        "Status: Dice rolled - enter from bar"
+                    )
                 else:
-                    self.status_label.setText("Status: Dice rolled - choose dice/checker")
+                    self.status_label.setText(
+                        "Status: Dice rolled - choose dice/checker"
+                    )
             elif message == "Dice skipped":
                 self.status_label.setText("Status: Dice skipped")
             elif message == "You must enter from the bar first":
-                self.status_label.setText("Status: You must enter from the bar first")
+                self.status_label.setText(
+                    "Status: You must enter from the bar first"
+                )
                 self.bar_btn.setEnabled(True)
                 self.skip_btn.setEnabled(True)
             elif message == "Target point is blocked":
-                self.status_label.setText("Status: Target blocked - choose another dice or skip")
+                self.status_label.setText(
+                    "Status: Target blocked - choose another dice or skip"
+                )
                 self.skip_btn.setEnabled(True)
             else:
                 self.status_label.setText("Status: " + message)
@@ -430,14 +487,20 @@ class GameWindow(QWidget):
             self.dice2_label.set_selected(False)
 
         elif len(self.current_dice) == 1:
-            self.dice1_label.setText(dice_faces.get(self.current_dice[0], "⚀"))
+            self.dice1_label.setText(
+                dice_faces.get(self.current_dice[0], "⚀")
+            )
             self.dice2_label.setText("-")
             self.dice1_label.set_selected(self.selected_dice_index == 0)
             self.dice2_label.set_selected(False)
 
         else:
-            self.dice1_label.setText(dice_faces.get(self.current_dice[0], "⚀"))
-            self.dice2_label.setText(dice_faces.get(self.current_dice[1], "⚀"))
+            self.dice1_label.setText(
+                dice_faces.get(self.current_dice[0], "⚀")
+            )
+            self.dice2_label.setText(
+                dice_faces.get(self.current_dice[1], "⚀")
+            )
             self.dice1_label.set_selected(self.selected_dice_index == 0)
             self.dice2_label.set_selected(self.selected_dice_index == 1)
 
@@ -518,7 +581,9 @@ class GameWindow(QWidget):
             return
 
         if self.has_my_checker_on_bar():
-            self.status_label.setText("Status: You must enter from the bar first")
+            self.status_label.setText(
+                "Status: You must enter from the bar first"
+            )
             return
 
         if not point.checkers:
@@ -526,7 +591,9 @@ class GameWindow(QWidget):
             return
 
         if not point.highlighted:
-            self.status_label.setText("Status: This checker cannot move with selected dice")
+            self.status_label.setText(
+                "Status: This checker cannot move with selected dice"
+            )
             return
 
         self.send_move(point.index)
@@ -561,7 +628,9 @@ class GameWindow(QWidget):
                 "dice": dice_value
             })
 
-        self.status_label.setText(f"Status: Entering from bar using dice {dice_value}")
+        self.status_label.setText(
+            f"Status: Entering from bar using dice {dice_value}"
+        )
 
     def skip_dice(self):
         dice_value = self.get_selected_dice_value()
@@ -596,7 +665,9 @@ class GameWindow(QWidget):
                 "dice": dice_value
             })
 
-        self.status_label.setText(f"Status: Move from {from_index} using dice {dice_value}")
+        self.status_label.setText(
+            f"Status: Move from {from_index} using dice {dice_value}"
+        )
 
     def send_roll_dice(self):
         if self.game_over:

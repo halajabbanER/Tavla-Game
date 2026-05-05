@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QFrame
+from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QFrame, QMessageBox
 from PyQt5.QtCore import Qt
 from gui.game_window import GameWindow
 from client.client import Client
@@ -9,6 +9,7 @@ class StartWindow(QWidget):
         super().__init__()
 
         self.client = None
+        self.game_window = None
 
         self.setWindowTitle("Backgammon Game")
         self.setGeometry(100, 100, 900, 650)
@@ -61,6 +62,7 @@ class StartWindow(QWidget):
             font-size: 20px;
         """)
 
+        # 🔥 الحقول (فاضية)
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("👤 Player Name")
 
@@ -90,6 +92,7 @@ class StartWindow(QWidget):
                 }
             """)
 
+        # الأزرار
         self.connect_btn = QPushButton("CONNECT")
         self.exit_btn = QPushButton("EXIT")
 
@@ -127,6 +130,7 @@ class StartWindow(QWidget):
             }
         """)
 
+        # ترتيب العناصر
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
         card_layout.addSpacing(10)
@@ -144,27 +148,42 @@ class StartWindow(QWidget):
 
         self.setLayout(main_layout)
 
-    # 🔥 الدالة المعدلة (الأهم)
+    # 🔥 الاتصال بالسيرفر
     def connect_to_server(self):
-        ip = self.ip_input.text()
-        port = self.port_input.text()
-        name = self.name_input.text()
+        name = self.name_input.text().strip()
+        ip = self.ip_input.text().strip()
+        port_text = self.port_input.text().strip()
 
         # تحقق من الإدخال
-        if not ip or not port or not name:
-            print("Please fill all fields")
+        if not name or not ip or not port_text:
+            QMessageBox.warning(self, "Missing Data", "Please fill all fields.")
             return
 
+        # تحقق من port
+        try:
+            port = int(port_text)
+        except ValueError:
+            QMessageBox.warning(self, "Invalid Port", "Port must be a number.")
+            return
+
+        # إنشاء client
         self.client = Client(ip, port)
 
-        if self.client.connect():
-            # 🔥 هذا أهم سطر (join)
-            self.client.send({
-                "action": "join",
-                "name": name
-            })
+        # محاولة الاتصال
+        if not self.client.connect():
+            QMessageBox.critical(self, "Connection Failed", f"Cannot connect to {ip}:{port}")
+            return
 
-            self.open_game_window()
+        # إرسال join
+        self.client.send({
+            "action": "join",
+            "name": name
+        })
+
+        print(f"Connected to {ip}:{port}")
+
+        # فتح اللعبة
+        self.open_game_window()
 
     def open_game_window(self):
         self.game_window = GameWindow(self.client)
