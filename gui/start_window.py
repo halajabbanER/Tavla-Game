@@ -1,5 +1,11 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QFrame, QMessageBox
+from PyQt5.QtWidgets import (
+    QWidget, QLabel, QLineEdit,
+    QPushButton, QVBoxLayout,
+    QFrame, QMessageBox
+)
+
 from PyQt5.QtCore import Qt
+
 from gui.game_window import GameWindow
 from client.client import Client
 
@@ -13,6 +19,7 @@ class StartWindow(QWidget):
 
         self.setWindowTitle("Backgammon Game")
         self.setGeometry(100, 100, 900, 650)
+
         self.setStyleSheet("""
             QWidget {
                 background-color: #070B2A;
@@ -26,6 +33,7 @@ class StartWindow(QWidget):
 
         top_title = QLabel("Backgammon Game")
         top_title.setAlignment(Qt.AlignCenter)
+
         top_title.setStyleSheet("""
             color: #5EF6FF;
             font-size: 32px;
@@ -35,6 +43,7 @@ class StartWindow(QWidget):
 
         card = QFrame()
         card.setFixedSize(620, 470)
+
         card.setStyleSheet("""
             QFrame {
                 background-color: rgba(20, 25, 70, 210);
@@ -49,6 +58,7 @@ class StartWindow(QWidget):
 
         title = QLabel("BACKGAMMON")
         title.setAlignment(Qt.AlignCenter)
+
         title.setStyleSheet("""
             color: white;
             font-size: 44px;
@@ -57,12 +67,13 @@ class StartWindow(QWidget):
 
         subtitle = QLabel("Online Tavla Game")
         subtitle.setAlignment(Qt.AlignCenter)
+
         subtitle.setStyleSheet("""
             color: #D7E8FF;
             font-size: 20px;
         """)
 
-        # 🔥 الحقول (فاضية)
+        # Inputs
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("👤 Player Name")
 
@@ -72,8 +83,13 @@ class StartWindow(QWidget):
         self.port_input = QLineEdit()
         self.port_input.setPlaceholderText("🔌 Port")
 
-        for input_box in [self.name_input, self.ip_input, self.port_input]:
+        for input_box in [
+            self.name_input,
+            self.ip_input,
+            self.port_input
+        ]:
             input_box.setFixedHeight(55)
+
             input_box.setStyleSheet("""
                 QLineEdit {
                     background-color: rgba(255, 255, 255, 35);
@@ -83,24 +99,26 @@ class StartWindow(QWidget):
                     font-size: 18px;
                     padding-left: 15px;
                 }
+
                 QLineEdit::placeholder {
                     color: #B8C7E0;
                 }
+
                 QLineEdit:focus {
                     border: 2px solid #F25CFF;
                     background-color: rgba(255, 255, 255, 50);
                 }
             """)
 
-        # الأزرار
+        # Buttons
         self.connect_btn = QPushButton("CONNECT")
         self.exit_btn = QPushButton("EXIT")
 
         self.connect_btn.setFixedHeight(58)
         self.exit_btn.setFixedHeight(58)
 
-        self.exit_btn.clicked.connect(self.close)
         self.connect_btn.clicked.connect(self.connect_to_server)
+        self.exit_btn.clicked.connect(self.close)
 
         self.connect_btn.setStyleSheet("""
             QPushButton {
@@ -111,6 +129,7 @@ class StartWindow(QWidget):
                 font-size: 20px;
                 font-weight: bold;
             }
+
             QPushButton:hover {
                 background-color: #00A8FF;
             }
@@ -125,18 +144,21 @@ class StartWindow(QWidget):
                 font-size: 20px;
                 font-weight: bold;
             }
+
             QPushButton:hover {
                 background-color: #B0004B;
             }
         """)
 
-        # ترتيب العناصر
+        # Layout
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
         card_layout.addSpacing(10)
+
         card_layout.addWidget(self.name_input)
         card_layout.addWidget(self.ip_input)
         card_layout.addWidget(self.port_input)
+
         card_layout.addWidget(self.connect_btn)
         card_layout.addWidget(self.exit_btn)
 
@@ -148,33 +170,46 @@ class StartWindow(QWidget):
 
         self.setLayout(main_layout)
 
-    # 🔥 الاتصال بالسيرفر
+    # Connect
     def connect_to_server(self):
+
         name = self.name_input.text().strip()
         ip = self.ip_input.text().strip()
         port_text = self.port_input.text().strip()
 
-        # تحقق من الإدخال
+        # Validation
         if not name or not ip or not port_text:
-            QMessageBox.warning(self, "Missing Data", "Please fill all fields.")
+            QMessageBox.warning(
+                self,
+                "Missing Data",
+                "Please fill all fields."
+            )
             return
 
-        # تحقق من port
         try:
             port = int(port_text)
+
         except ValueError:
-            QMessageBox.warning(self, "Invalid Port", "Port must be a number.")
+            QMessageBox.warning(
+                self,
+                "Invalid Port",
+                "Port must be a number."
+            )
             return
 
-        # إنشاء client
+        # Create client
         self.client = Client(ip, port)
 
-        # محاولة الاتصال
+        # Connect
         if not self.client.connect():
-            QMessageBox.critical(self, "Connection Failed", f"Cannot connect to {ip}:{port}")
+            QMessageBox.critical(
+                self,
+                "Connection Failed",
+                f"Cannot connect to {ip}:{port}"
+            )
             return
 
-        # إرسال join
+        # Send player name
         self.client.send({
             "action": "join",
             "name": name
@@ -182,10 +217,19 @@ class StartWindow(QWidget):
 
         print(f"Connected to {ip}:{port}")
 
-        # فتح اللعبة
+        # Open game
         self.open_game_window()
 
+    # Open game window
     def open_game_window(self):
-        self.game_window = GameWindow(self.client)
+
+        player_name = self.name_input.text()
+
+        self.game_window = GameWindow(
+            self.client,
+            player_name
+        )
+
         self.game_window.show()
+
         self.close()

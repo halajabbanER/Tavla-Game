@@ -14,21 +14,47 @@ class Server:
         self.room = Room()
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+        self.server_socket.setsockopt(
+            socket.SOL_SOCKET,
+            socket.SO_REUSEADDR,
+            1
+        )
+
     def start(self):
-        self.server_socket.bind((HOST, PORT))
-        self.server_socket.listen()
+        try:
+            self.server_socket.bind((HOST, PORT))
+            self.server_socket.listen()
 
-        print(f"Server started on {HOST}:{PORT}")
+            print(f"Server started on {HOST}:{PORT}")
 
-        while True:
-            client_socket, address = self.server_socket.accept()
-            print("Client connected:", address)
+            while True:
+                client_socket, address = self.server_socket.accept()
+                print("Client connected:", address)
 
-            client_handler = ClientHandler(client_socket, address, self.room)
-            self.room.add_client(client_handler)
+                client_handler = ClientHandler(
+                    client_socket,
+                    address,
+                    self.room
+                )
 
-            thread = threading.Thread(target=client_handler.handle)
-            thread.start()
+                self.room.add_client(client_handler)
+
+                thread = threading.Thread(
+                    target=client_handler.handle,
+                    daemon=True
+                )
+
+                thread.start()
+
+        except OSError as e:
+            print("Server error:", e)
+            print("Maybe the port is already used. Close old server and try again.")
+
+        except KeyboardInterrupt:
+            print("\nServer stopped.")
+
+        finally:
+            self.server_socket.close()
 
 
 if __name__ == "__main__":
