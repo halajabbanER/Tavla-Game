@@ -181,6 +181,7 @@ class GameWindow(QWidget):
         self.selected_dice_index = 0
         self.is_my_turn = False
         self.my_symbol = None
+        self.my_player_id = None  # ← متغير جديد لحفظ هويتك من السيرفر
         self.current_board = []
         self.current_bar = {"1": 0, "-1": 0}
         self.game_over = False
@@ -334,6 +335,11 @@ class GameWindow(QWidget):
 
         message = data.get("message")
 
+        # ← التعرف على هويتك عند الانضمام لأول مرة
+        if data.get("type") == "player_joined":
+            if data.get("name") == self.player_name:
+                self.my_player_id = str(data.get("player_id"))
+
         if "state" in data:
             state = data["state"]
 
@@ -358,14 +364,15 @@ class GameWindow(QWidget):
 
             self.refresh_dice_display()
 
-            current_turn = state.get("current_turn")
+            current_turn = str(state.get("current_turn"))
 
             if self.client:
-                my_id = str(self.client.socket.getsockname())
-                self.is_my_turn = str(current_turn) == my_id
+                # ← التعديل: المقارنة بالمعرف المحفوظ وليس بـ getsockname
+                if self.my_player_id:
+                    self.is_my_turn = (current_turn == self.my_player_id)
 
                 for player in state.get("players", []):
-                    if str(player.get("id")) == my_id:
+                    if str(player.get("id")) == self.my_player_id:
                         self.my_symbol = player.get("symbol")
 
                 has_bar_checker = self.has_my_checker_on_bar()

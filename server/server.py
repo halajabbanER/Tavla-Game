@@ -5,7 +5,7 @@ from server.room import Room
 from server.client_handler import ClientHandler
 
 
-HOST = "127.0.0.1"
+HOST = "0.0.0.0"
 PORT = 5555
 
 
@@ -25,11 +25,11 @@ class Server:
             self.server_socket.bind((HOST, PORT))
             self.server_socket.listen()
 
-            print(f"Server started on {HOST}:{PORT}")
+            print(f"Server started on {HOST}:{PORT}", flush=True)
 
             while True:
                 client_socket, address = self.server_socket.accept()
-                print("Client connected:", address)
+                print("Client connected:", address, flush=True)
 
                 client_handler = ClientHandler(
                     client_socket,
@@ -43,15 +43,14 @@ class Server:
                     target=client_handler.handle,
                     daemon=True
                 )
-
                 thread.start()
 
         except OSError as e:
-            print("Server error:", e)
-            print("Maybe the port is already used. Close old server and try again.")
+            print("Server error:", e, flush=True)
+            print("Maybe the port is already used.", flush=True)
 
         except KeyboardInterrupt:
-            print("\nServer stopped.")
+            print("\nServer stopped.", flush=True)
 
         finally:
             self.server_socket.close()

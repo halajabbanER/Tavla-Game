@@ -23,12 +23,16 @@ class ClientHandler:
                     self.send(response)
 
         except Exception as e:
-            print("Client error:", e)
+            print("Client error:", e, flush=True)
 
         finally:
             self.room.remove_client(self)
             self.client_socket.close()
+            print("Client disconnected:", self.address, flush=True)
 
     def send(self, data):
-        message = json.dumps(data)
-        self.client_socket.send(message.encode())
+        try:
+            message = json.dumps(data)
+            self.client_socket.sendall(message.encode())
+        except Exception as e:
+            print("Send error:", e, flush=True)
